@@ -7,6 +7,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
+import android.Manifest;
 import android.graphics.Bitmap;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CallbackContext;
@@ -39,8 +40,9 @@ import net.ypresto.androidtranscoder.MediaTranscoder;
 public class VideoEditor extends CordovaPlugin {
 
     private static final String TAG = "VideoEditor";
-
+    private static final int GALLERY_REQUEST_CODE = 555;
     private CallbackContext callback;
+    private JSONArray args;
 
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
@@ -48,12 +50,9 @@ public class VideoEditor extends CordovaPlugin {
 
         this.callback = callbackContext;
 
-        if (action.equals("transcodeVideo")) {
-            try {
-                this.transcodeVideo(args);
-            } catch (IOException e) {
-                callback.error(e.toString());
-            }
+        if (action.equals("transcodeVideo"))
+        {
+            checkGalleryPermission();
             return true;
         } else if (action.equals("createThumbnail")) {
             try {
@@ -249,6 +248,52 @@ public class VideoEditor extends CordovaPlugin {
 
             }
         });
+    }
+    private void checkGalleryPermission(){
+
+        if (!cordova.hasPermission(Manifest.permission.READ_EXTERNAL_STORAGE)) {
+            cordova.requestPermissions(this, GALLERY_REQUEST_CODE,
+                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}
+            );
+        }
+        else if (!cordova.hasPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+            cordova.requestPermissions(this, GALLERY_REQUEST_CODE,
+                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}
+            );
+        }
+        else
+        {
+            doIt();
+        }
+    }
+    @Override
+    public void onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) throws JSONException {
+        super.onRequestPermissionResult(requestCode, permissions, grantResults);
+        for(int r:grantResults){
+            if(r == PackageManager.PERMISSION_DENIED)
+            {
+                cordova.getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        callback.error("Please allow plugin to make block working");
+                    }
+                });
+                return;
+            }
+        }
+        switch(requestCode){
+            case GALLERY_REQUEST_CODE:
+                checkGalleryPermission();
+                break;
+        }
+    }
+    private void doIt()
+    {
+        try {
+            this.transcodeVideo(args);
+        } catch (Exception e) {
+            callback.error(e.toString());
+        }
     }
 
     /**
