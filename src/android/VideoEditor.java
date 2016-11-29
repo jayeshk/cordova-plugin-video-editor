@@ -49,6 +49,7 @@ public class VideoEditor extends CordovaPlugin {
         Log.d(TAG, "execute method starting");
 
         this.callback = callbackContext;
+        this.args = args;
 
         if (action.equals("transcodeVideo"))
         {
